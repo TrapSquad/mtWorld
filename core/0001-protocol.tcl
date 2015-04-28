@@ -138,7 +138,11 @@ proc mtIrcMain {sck} {
 						if {$state && $c != " "} {
 							switch -regexp -- $c {
 								"\[qaohv]" {
-									dict set mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo [format "%s%s" $c [dict get $::mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo]]
+									if {![dict exists mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo]} {
+										dict set dict set mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo $c
+									} {
+										dict set mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo [format "%s%s" $c [dict get $::mts chans [lindex $comd 2] nick [lindex $comd 3+$addto] uo]]
+									}
 								}
 							}
 							callbind $sck mode - +$c [lindex $comd 2] [lindex $comd 3+$addto]
@@ -169,10 +173,10 @@ proc mtIrcMain {sck} {
 				}
 			}
 			dict set mts chans [lindex $comd 3] ts [lindex $comd 2]
-			set names [split $payload " "]
-			putcmdlog [join [concat $comd $payload] " "]
+			putcmdlog [join [split $payload " "] " "]
 			set bei 0
-			foreach {name} $names {
+			foreach {name} [split $payload " "] {
+				set name [lindex $name 0]
 				if {[string index $name 0] == "&"} {set bei 1}
 				if {[string index $name 0] == "\""} {set bei 1}
 				if {[string index $name 0] == "'"} {set bei 1}
