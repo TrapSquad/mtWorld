@@ -1,7 +1,12 @@
+if {![info exists ::opsrvnick]} {
+	putcmdlog "You need to provide a opsrvnick in services.conf."
+	exit
+}
+
 bind [dict get $::mts sock] evnt - signon mtLog:Signon
 bind [dict get $::mts sock] evnt - signoff mtLog:Signoff
 
-mtNewNick mtOpServ oper services. "mtServices Control"
+mtNewNick $::opsrvnick oper services. "mtServices Control"
 
 package require ip
 
@@ -19,26 +24,26 @@ proc mtLog:Signoff {u} {
 }
 
 bind [dict get $::mts sock] pub - "h" mtLog:h
-bind [dict get $::mts sock] msg mtopserv "addh" mtLog:addh
-bind [dict get $::mts sock] msg mtopserv "delh" mtLog:delh
+bind [dict get $::mts sock] msg $::opsrvnick "addh" mtLog:addh
+bind [dict get $::mts sock] msg $::opsrvnick "delh" mtLog:delh
 
 proc mtLog:h {f c t} {
-	mtPrivmsg mtOpServ $c [format "^ %s" $t]
+	mtPrivmsg $::opsrvnick $c [format "^ %s" $t]
 }
 
 proc mtLog:addh {f x t} {
 	set c [lindex [split $t " "] 0]
-	mtNotice mtOpServ $f [format "Adding h to %s" $c]
-	mtJoin mtOpServ $c v
-	mtPrivmsg mtOpServ $c [format "I was added to %s by %s" $c $f]
+	mtNotice $::opsrvnick $f [format "Adding h to %s" $c]
+	mtJoin $::opsrvnick $c v
+	mtPrivmsg $::opsrvnick $c [format "I was added to %s by %s" $c $f]
 	nda set "hchans/[ndaenc $c]" 1
 }
 
 proc mtLog:delh {f x t} {
 	set c [lindex [split $t " "] 0]
-	mtNotice mtOpServ $f [format "Deleting h from %s" $c]
-	mtPrivmsg mtOpServ $c [format "I was deleted by %s" $c $f]
-	mtPart mtOpServ $c "Vanishing from view..."
+	mtNotice $::opsrvnick $f [format "Deleting h from %s" $c]
+	mtPrivmsg $::opsrvnick $c [format "I was deleted by %s" $c $f]
+	mtPart $::opsrvnick $c "Vanishing from view..."
 	nda set "hchans/[ndaenc $c]" 0
 }
 
@@ -47,7 +52,7 @@ proc mtLog:Synched {} {
 	mtNotice [dict get $::mts name] $::srvchan [format "mtWorld is now believed to be synchronised to the IRC network." [dict get $::mts name]]
 	foreach {k v} [nda get "hchans"] {
 		if {$v == "1"} {
-			mtJoin mtOpServ [ndadec $k] v
+			mtJoin $::opsrvnick [ndadec $k] v
 		}
 	}
 }
