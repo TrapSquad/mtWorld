@@ -269,10 +269,18 @@ proc mtSetRhost {from targ} {
 	mtSend [format ":%s v %s -xt" $from $targ $msg]
 }
 
-proc mtOperUp {from targ oflags snomasks omodes} {
+proc mtOperUp {from targ oflags} {
 	mtSend [format ":%s BB %s +%s" $from $targ $oflags]
-	mtSend [format ":%s BW %s +%s" $from $targ $snomasks]
-	mtSend [format ":%s v %s +%s" $from $targ $omodes]
+	mtSend [format ":%s BW %s +%s" $from $targ cF]
+	set opmodes ""
+	if {[string match "*N*" $oflags]} {append opmodes N}
+	if {[string match "*A*" $oflags]} {append opmodes A}
+	if {[string match "*a*" $oflags]} {append opmodes a}
+	if {[string match "*C*" $oflags]} {append opmodes C}
+	if {[string match "*O*" $oflags]} {append opmodes owgs}
+	if {[string match "*h*" $oflags]} {append opmodes h}
+	if {[string match "*W*" $oflags]} {append opmodes W}
+	mtSend [format ":%s v %s +%s" $from $targ $opmodes]
 }
 
 proc mtJoin {from targ modes} {
