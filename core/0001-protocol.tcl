@@ -1,5 +1,14 @@
 set mts [list]
 
+proc hex2dec {largeHex} {
+    set res 0
+    foreach hexDigit [split $largeHex {}] {
+        set new 0x$hexDigit
+        set res [expr {16*$res + $new}]
+    }
+    return $res
+};# MS @ wiki.tcl.tk
+
 if {[info commands putdcc] != [list putdcc]} {
 	proc putdcc {idx text} {
 		puts $idx $text
@@ -56,6 +65,18 @@ proc mtIrcMain {sck} {
 			dict set mts nicks [lindex $comd 0] [list]
 			callbind $sck evnt - signoff [lindex $comd 0]
 		}
+		"." - "KILL" {
+			lset comd 2 [string tolower [lindex $comd 2]]
+			foreach {k v} [dict get $::mts chans] {
+				if {![dict exists $::mts chans $k nick [lindex $comd 2] onchan]} {continue}
+				if {[dict get $::mts chans $k nick [lindex $comd 2] onchan] == "1"} {
+					dict set mts chans $k nick [lindex $comd 2] uo ""
+					dict set mts chans $k nick [lindex $comd 2] onchan 0
+				}
+			}
+			dict set mts nicks [lindex $comd 2] [list]
+			callbind $sck evnt - signoff [lindex $comd 2]
+		}
 		"D" - "PART" {
 			dict set mts chans [lindex $comd 2] nick [lindex $comd 0] onchan 0
 			dict set mts chans [lindex $comd 2] nick [lindex $comd 0] uo ""
@@ -80,6 +101,7 @@ proc mtIrcMain {sck} {
 				dict set mts nicks [lindex $comd 1] serveron [lindex $comd 6]
 				dict set mts nicks [lindex $comd 1] vhost [lindex $comd 9]
 				dict set mts nicks [lindex $comd 1] suser [lindex $comd 7]
+				if {"*" != [lindex $comd 10]} {dict set mts nicks [lindex $comd 1] nickip [binary decode base64 [lindex $comd 10]]} {dict set mts nicks [lindex $comd 1] nickip [binary decode hex 00000000]}
 				dict set mts nicks [lindex $comd 1] umode [string range [lindex $comd 8] 1 end]
 				callbind $sck evnt - signon [lindex $comd 1]
 			}
@@ -104,6 +126,7 @@ proc mtIrcMain {sck} {
 			}
 		}
 		"G" - "MODE" {
+			lset comd 2 [string tolower [lindex $comd 2]]
 			set addto 0
 			foreach {c} [split [lindex $comd 3] {}] {
 				switch -regexp -- $c {
@@ -111,6 +134,7 @@ proc mtIrcMain {sck} {
 					"\\-" {set state 0}
 					"\[beIqaohvlkL]" {
 						incr addto
+						lset comd 3+$addto [string tolower [lindex $comd 3+$addto]]
 						if {$state && $c != " "} {
 							switch -regexp -- $c {
 								"\[qaohv]" {
@@ -200,7 +224,7 @@ proc mtIrcConnect {name pass addr port {gecos "mtServices"}} {
 	dict set mts sock [set sck [connect $addr $port mtIrcMain]]
 	dict set mts name $name
 	putdcc $sck [format "PASS %s" $pass]
-	putdcc $sck "PROTOCTL SJOIN SJOIN2 SJ3 TKLEXT VL NICKv2 VHP TOKEN ESVID UMODE2"
+	putdcc $sck "PROTOCTL SJOIN SJOIN2 SJ3 TKLEXT VL NICKv2 VHP TOKEN ESVID UMODE2 NICKIP"
 	putdcc $sck [format "SERVER %s 1 :U2311-Eh %s" $name $gecos]
 }
 
@@ -228,11 +252,13 @@ proc mtPart {from targ msg} {
 proc mtSetAcct {from targ msg} {
 	global mts
 	mtSend [format ":%s n %s +d %s" $from $targ $msg]
-	dict set mts nicks [lindex $comd 1] suser $msg
+	dict set mts nicks [string tolower $targ] suser $msg
 }
 
 proc mtSetVhost {from targ msg} {
+	global mts
 	mtSend [format ":%s AL %s %s" $from $targ $msg]
+	dict set mts nicks [string tolower $targ] vhost $msg
 }
 
 proc mtSetRhost {from targ} {
@@ -251,4 +277,5 @@ proc mtJoin {from targ modes} {
 		dict set mts chans [string tolower $targ] ts [clock format [clock seconds] -format "%s"]
 	}
 	mtSend [format ":%s ~ %s %s :%s%s" [dict get $::mts name] [dict get $::mts chans [string tolower $targ] ts] $targ [string map [list "q" "*" "a" "~" "o" "@" "h" "%" "v" "+"] $modes] $from]
+	dict set mts chans [string tolower $targ] nick $from uo $modes
 }

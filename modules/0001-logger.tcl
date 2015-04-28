@@ -3,8 +3,15 @@ bind [dict get $::mts sock] evnt - signoff mtLog:Signoff
 
 mtNewNick mtOpServ oper services. "mtServices Control"
 
+package require ip
+
+proc binToString {binip} {
+	set stringip [::ip::ToString $binip]
+	if {[::ip::IPv6? $stringip]} {return [::ip::contract $stringip]} {return $stringip}
+}
+
 proc mtLog:Signon {u} {
-	mtNotice [dict get $::mts name] $::srvchan [format "Connecting user %s - ident=%s host=%s vhost=%s via=%s" $u [dict get $::mts nicks $u ident] [dict get $::mts nicks $u rhost] [dict get $::mts nicks $u vhost] [dict get $::mts nicks $u serveron] ]
+	mtNotice [dict get $::mts name] $::srvchan [format "Connecting user %s - ident=%s host=%s vhost=%s via=%s nickip=%s" $u [dict get $::mts nicks $u ident] [dict get $::mts nicks $u rhost] [dict get $::mts nicks $u vhost] [dict get $::mts nicks $u serveron] [binToString [dict get $::mts nicks $u nickip]]]
 }
 
 proc mtLog:Signoff {u} {

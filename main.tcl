@@ -1,6 +1,7 @@
 #!/usr/bin/env tclsh
 # Basic tcl services program.
 
+package require Tcl 8.6
 package require tie
 package require base64
 package require sha1
