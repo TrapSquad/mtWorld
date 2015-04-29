@@ -1,0 +1,17 @@
+Welcome to the operator service.
+
++N:
+  OPER ADD|DEL|MODIFY|GET
+   more info in OPER HELP
+  SANICK <old> <new>
+   change <old>'s nick to <new>
+
+any oper:
+  OPER LOGIN <username> <password>
+   log into your oline
+
+any user:
+  ADDH <channel>
+   add "h" function to your channel
+  DELH <channel>
+   delete "h" function from your channel

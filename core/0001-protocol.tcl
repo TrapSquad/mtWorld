@@ -37,16 +37,17 @@ proc mtIrcMain {sck} {
 	if {$gotsplitwhere==-1} {set comd [split $line " "]} {set comd [split [string range $line 0 [expr {$gotsplitwhere - 1}]] " "]}
 	set payload [split [string range $line [expr {$gotsplitwhere + 2}] end] " "]
 	#putcmdlog $line
+	# Well, um, we now have to support Unreal3.4-alpha*, so yoah
 	switch -exact -- [lindex $comd $one] {
 		"SERVER" {
 			putcmdlog "We now know who we're directly linked to."
 			dict set mts rname [lindex $comd 1]
 		}
-		"AO" {
+		"AO" - "NETINFO" {
 			putdcc $sck $line
 			putcmdlog "Received NETINFO, repeating back"
 		}
-		"ES" {
+		"ES" - "EOS" {
 			if {[lindex $comd 0] == [dict get $::mts rname]} {
 				putdcc $sck [format ":%s ES" [dict get $::mts name]]
 				putcmdlog "Received EOS, EOSing back to the uplink"
@@ -207,6 +208,7 @@ proc mtIrcMain {sck} {
 			}
 		}
 		"!" - "PRIVMSG" {
+			putcmdlog $line
 			if {[string index [lindex $comd 2] 0] == "#"} {
 				set msg [split $payload " "]
 				set rest [join [lrange $msg 1 end] " "]
@@ -238,40 +240,42 @@ proc mtSend {data} {
 }
 
 proc mtNewNick {n uh h g} {
-	mtSend [format "& %s 1 100 %s %s %s 0 +HISoqi %s :%s" $n $uh $h [dict get $::mts name] $h $g]
+	mtSend [format ":%s SQLINE %s :Reserved for %s (if this is in error, ask for help from the opers)" [dict get $::mts name] $n [dict get $::mts name]]
+	mtSend [format "NICK %s 1 100 %s %s %s 0 +HISoqi %s :%s" $n $uh $h [dict get $::mts name] $h $g]
 }
 
 proc mtPrivmsg {from targ msg} {
-	mtSend [format ":%s ! %s :%s" $from $targ $msg]
+	mtSend [format ":%s PRIVMSG %s :%s" $from $targ $msg]
 }
 
 proc mtNotice {from targ msg} {
-	mtSend [format ":%s B %s :%s" $from $targ $msg]
+	mtSend [format ":%s NOTICE %s :%s" $from $targ $msg]
 }
 
 proc mtPart {from targ msg} {
-	mtSend [format ":%s D %s :%s" $from $targ $msg]
+	mtSend [format ":%s PART %s :%s" $from $targ $msg]
 }
 
 proc mtSetAcct {from targ msg} {
 	global mts
-	mtSend [format ":%s n %s +d %s" $from $targ $msg]
+	mtSend [format ":%s SVSMODE %s +d %s" $from $targ $msg]
 	dict set mts nicks [string tolower $targ] suser $msg
 }
 
 proc mtSetVhost {from targ msg} {
 	global mts
-	mtSend [format ":%s AL %s %s" $from $targ $msg]
+	mtSend [format ":%s CHGHOST %s %s" $from $targ $msg]
 	dict set mts nicks [string tolower $targ] vhost $msg
 }
 
 proc mtSetRhost {from targ} {
-	mtSend [format ":%s v %s -xt" $from $targ $msg]
+	mtSend [format ":%s SVS2MODE %s -xt" $from $targ $msg]
 }
 
 proc mtOperUp {from targ oflags} {
-	mtSend [format ":%s BB %s +%s" $from $targ $oflags]
-	mtSend [format ":%s BW %s +%s" $from $targ cF]
+	global mts
+	mtSend [format ":%s SVSO %s +%s" $from $targ $oflags]
+	mtSend [format ":%s SVS2SNO %s +%s" $from $targ cF]
 	set opmodes ""
 	if {[string match "*N*" $oflags]} {append opmodes N}
 	if {[string match "*A*" $oflags]} {append opmodes A}
@@ -280,7 +284,8 @@ proc mtOperUp {from targ oflags} {
 	if {[string match "*O*" $oflags]} {append opmodes owgs}
 	if {[string match "*h*" $oflags]} {append opmodes h}
 	if {[string match "*W*" $oflags]} {append opmodes W}
-	mtSend [format ":%s v %s +%s" $from $targ $opmodes]
+	mtSend [format ":%s SVS2MODE %s +%s" $from $targ $opmodes]
+	dict set mts nicks [string tolower $targ] umode [format "%s%s" [dict get $::mts nicks [string tolower $targ] umode] $opmodes]
 }
 
 proc mtJoin {from targ modes} {
@@ -288,6 +293,7 @@ proc mtJoin {from targ modes} {
 		global mts
 		dict set mts chans [string tolower $targ] ts [clock format [clock seconds] -format "%s"]
 	}
-	mtSend [format ":%s ~ %s %s :%s%s" [dict get $::mts name] [dict get $::mts chans [string tolower $targ] ts] $targ [string map [list "q" "*" "a" "~" "o" "@" "h" "%" "v" "+"] $modes] $from]
+	mtSend [format ":%s SJOIN %s %s :%s%s" [dict get $::mts name] [dict get $::mts chans [string tolower $targ] ts] $targ [string map [list "q" "*" "a" "~" "o" "@" "h" "%" "v" "+"] $modes] $from]
+	putcmdlog [format ":%s SJOIN %s %s :%s%s" [dict get $::mts name] [dict get $::mts chans [string tolower $targ] ts] $targ [string map [list "q" "*" "a" "~" "o" "@" "h" "%" "v" "+"] $modes] $from]
 	dict set mts chans [string tolower $targ] nick $from uo $modes
 }
