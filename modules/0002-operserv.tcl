@@ -4,6 +4,7 @@ bind [dict get $::mts sock] msg [string tolower $::opsrvnick] checkop mtOpServ:a
 bind [dict get $::mts sock] msg [string tolower $::opsrvnick] oper mtOpServ:oper
 bind [dict get $::mts sock] msg [string tolower $::opsrvnick] sanick mtOpServ:sanick
 bind [dict get $::mts sock] msg [string tolower $::opsrvnick] help mtOpServ:help
+bind [dict get $::mts sock] msg [string tolower $::opsrvnick] gline mtOpServ:gline
 
 proc mtOpServ:amIop {f to t} {
 	mtNotice $::opsrvnick $f [format "Your umodes are +%s" [dict get $::mts nicks [string tolower $f] umode]]
@@ -85,7 +86,25 @@ proc mtOpServ:sanick {f to t} {
 	set ts [clock format [clock seconds] -format %s]
 	if {""==[lindex $comd 0]} {mtNotice $::opsrvnick $f "Missing parameter.";return}
 	if {""==[lindex $comd 1]} {mtNotice $::opsrvnick $f "Missing parameter.";return}
-	mtSend [format ":%s e %s %s :%s" $::opsrvnick [lindex $comd 0] [lindex $comd 1] $ts]
+	mtSend [format ":%s SVSNICK %s %s :%s" $::opsrvnick [lindex $comd 0] [lindex $comd 1] $ts]
+}
+
+proc mtOpServ:gline {f to t} {
+	set comd [split $t " "]
+	if {![string match "*N*" [dict get $::mts nicks [string tolower $f] umode]]} {
+		mtNotice $::opsrvnick $f "Access forbidden."
+		return
+	}
+	set ts [clock format [clock seconds] -format %s]
+	if {""==[lindex $comd 0]} {mtNotice $::opsrvnick $f "Missing direction parameter.";return}
+	if {""==[lindex $comd 1]} {mtNotice $::opsrvnick $f "Missing ident parameter.";return}
+	if {""==[lindex $comd 2]} {mtNotice $::opsrvnick $f "Missing realhost parameter.";return}
+	if {"-"==[lindex $comd 0]} {mtSend [format "TKL %s G %s %s %s" [lindex $comd 0] [lindex $comd 1] [lindex $comd 2] $f]} {
+		if {![string is digit [lindex $comd 3]]} {mtNotice $::opsrvnick $f "Missing expirets (in seconds!) parameter.";return}
+		if {[lindex $comd 3] == 0} {set ets 0} {set ets [expr {$ts + [lindex $comd 3]}]}
+		if {""==[lindex $comd 4]} {mtNotice $::opsrvnick $f "Missing reason parameter.";return}
+		mtSend [format "TKL %s G %s %s %s %s %s :%s (%s)" [lindex $comd 0] [lindex $comd 1] [lindex $comd 2] $f $ets $ts $f [join [lrange $comd 4 end] " "]]
+	}
 }
 
 proc mtOpServ:help {f to t} {

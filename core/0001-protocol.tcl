@@ -35,7 +35,7 @@ proc mtIrcMain {sck} {
 	set line [string trimleft $line ":"]
 	set gotsplitwhere [string first " :" $line]
 	if {$gotsplitwhere==-1} {set comd [split $line " "]} {set comd [split [string range $line 0 [expr {$gotsplitwhere - 1}]] " "]}
-	set payload [split [string range $line [expr {$gotsplitwhere + 2}] end] " "]
+	set payload [string range $line [expr {$gotsplitwhere + 2}] end]
 	#putcmdlog $line
 	# Well, um, we now have to support Unreal3.4-alpha*, so yoah
 	switch -exact -- [lindex $comd $one] {
@@ -177,7 +177,6 @@ proc mtIrcMain {sck} {
 			putcmdlog [join [split $payload " "] " "]
 			set bei 0
 			foreach {name} [split $payload " "] {
-				set name [lindex $name 0]
 				if {[string index $name 0] == "&"} {set bei 1}
 				if {[string index $name 0] == "\""} {set bei 1}
 				if {[string index $name 0] == "'"} {set bei 1}
