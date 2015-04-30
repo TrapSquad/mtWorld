@@ -1,0 +1,24 @@
+# Connect to Unreal.
+# [1] -> name
+# [2] -> pass
+# [3] -> server ip
+# [4] -> server port (use + to link with SSL)
+# [5] -> server GECOS
+mtIrcConnect modnartech.irc.services.framework password 127.0.0.1 +6697 "I AM DEATH"
+
+#What channel must I log to?
+set srvchan "#services"
+
+# The cloak key is used as an RC4 key to encrypt the IP before running
+# it through the hasher.
+set cloakkey "ASDF"
+
+#Quoteserv nick. Use if your quoteserv module (ls modules/) is not disabled
+#(renamed to not end in .tcl)
+set quotenick "mtQuotes"
+
+#Opserv nick. Use if your operserv module (ls modules/) is not disabled
+#(renamed to not end in .tcl)
+set opsrvnick "mtOpers"
+
+#this is only a framework; modify everything that is there to your liking. ;)
